@@ -1,10 +1,12 @@
 import fastify from 'fastify'
 
+import { knex } from './database'
+
 export const app = fastify({
   logger: true,
 })
 
-app.get('/hello', (request, reply) => {
+app.get('/hello', async (request, reply) => {
   return reply.status(200).send('hello word')
 })
 
