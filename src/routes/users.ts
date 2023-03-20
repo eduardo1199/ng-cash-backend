@@ -20,9 +20,9 @@ export async function usersRoutes(app: FastifyInstance) {
     const sessionId = crypto.randomUUID()
 
     if (!user?.id) {
-      reply.cookie('sessionId', sessionId, {
+      reply.cookie('@ng-cash:sessionId', sessionId, {
         path: '/',
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
+        maxAge: 1000 * 60 * 60 * 24 * 1, // 1 dia
       })
 
       const response = await knex('users')
@@ -44,9 +44,11 @@ export async function usersRoutes(app: FastifyInstance) {
 
       return reply.status(201).send({ message: 'Success created user!' })
     } else {
-      reply.cookie('sessionId', sessionId, {
+      reply.cookie('@ng-cash:sessionId', sessionId, {
         path: '/',
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 1000 * 60 * 60 * 24 * 1, // 1 dias
       })
 
       await knex('users')
