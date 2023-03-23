@@ -1,12 +1,13 @@
 import { knex as setupKnex, Knex } from 'knex'
+import { env } from './env/validate'
 
 export const config: Knex.Config = {
-  client: 'sqlite3',
-  connection: './db/dev.db',
+  client: env.DATABASE_CLIENT,
+  connection: env.DATABASE_URL,
   useNullAsDefault: true,
   migrations: {
     extension: 'ts',
-    directory: 'db/migrations',
+    directory: env.DIRECTORY_DATABASE,
   },
 }
 

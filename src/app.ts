@@ -5,6 +5,7 @@ import cors from '@fastify/cors'
 
 import { usersRoutes } from './routes/users'
 import { transactionsRoutes } from './routes/transactions'
+import { env } from './env/validate'
 
 export const app = fastify({
   logger: true,
@@ -15,6 +16,6 @@ app.register(transactionsRoutes)
 
 app.register(cookies)
 app.register(cors, {
-  origin: 'http://localhost:5173',
+  origin: env.CLIENT_URL,
   credentials: true,
 })
