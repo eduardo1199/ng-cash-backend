@@ -2,13 +2,17 @@ import { FastifyInstance } from 'fastify'
 
 import crypto from 'node:crypto'
 
-import { z } from 'zod'
+import { CheckSessionId } from '../middlewares/check-session'
 
 import { knex } from '../database'
+import {
+  UserIdSchema,
+  UserRequestBodySchema,
+} from '../utils/user-routes-validation'
 
 export async function usersRoutes(app: FastifyInstance) {
   app.post('/users', async (request, reply) => {
-    const { name, email }: any = request.body
+    const { name, email } = UserRequestBodySchema.parse(request.body)
 
     const user = await knex('users')
       .select()
@@ -20,7 +24,7 @@ export async function usersRoutes(app: FastifyInstance) {
     const sessionId = crypto.randomUUID()
 
     if (!user?.id) {
-      reply.cookie('@ng-cash:sessionId', sessionId, {
+      reply.cookie('sessionId', sessionId, {
         path: '/',
         maxAge: 1000 * 60 * 60 * 24 * 1, // 1 dia
       })
@@ -32,7 +36,7 @@ export async function usersRoutes(app: FastifyInstance) {
           email,
           session_id: sessionId,
         })
-        .returning('id')
+        .returning(['id', 'name'])
 
       await knex('transactions').insert({
         id: crypto.randomUUID(),
@@ -42,9 +46,14 @@ export async function usersRoutes(app: FastifyInstance) {
         user_id: response[0].id,
       })
 
-      return reply.status(201).send({ message: 'Success created user!' })
+      return reply.status(201).send({
+        user: {
+          id: response[0].id,
+          name: response[0].name,
+        },
+      })
     } else {
-      reply.cookie('@ng-cash:sessionId', sessionId, {
+      reply.cookie('sessionId', sessionId, {
         path: '/',
         secure: false,
         sameSite: 'lax',
@@ -59,20 +68,29 @@ export async function usersRoutes(app: FastifyInstance) {
     }
   })
 
-  app.delete('/users/:id', async (request, reply) => {
-    const getUserIdSchema = z.object({
-      id: z.string().uuid('Formato inválido do ID'),
-    })
+  app.delete(
+    '/users/:id',
+    { preHandler: [CheckSessionId] },
+    async (request, reply) => {
+      const { id } = UserIdSchema.parse(request.params)
 
-    const sessionId = request.cookies.sessionId
-    const { id } = getUserIdSchema.parse(request.params)
+      await knex('users').where({ id }).del()
 
-    if (!sessionId) {
-      return reply.status(401).send({ error: 'Unauthorized' })
+      return reply.status(200).send({ message: 'Deleted!' })
+    },
+  )
+
+  app.get('/users', { preHandler: [CheckSessionId] }, async (request) => {
+    const userAuth = await knex('users')
+      .select('id')
+      .where({ session_id: request.cookies.sessionId })
+
+    const usersAll = await knex('users').select('*')
+
+    const users = usersAll.filter((user) => user.id !== userAuth[0].id)
+
+    return {
+      users,
     }
-
-    await knex('users').where({ id }).del()
-
-    return reply.status(200).send({ message: 'Deleted!' })
   })
 }
