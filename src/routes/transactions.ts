@@ -1,29 +1,24 @@
 import { FastifyInstance } from 'fastify'
 
+import { SessionIdSchema } from '../utils/session-validation'
+
 import crypto from 'node:crypto'
 
 import { z } from 'zod'
 import { knex } from '../database'
+import { TransactionRequestSchema } from '../utils/transactions-routes-validation'
+import { UserIdSchema } from '../utils/user-routes-validation'
 
 export async function transactionsRoutes(app: FastifyInstance) {
   app.post('/transactions', async (request, reply) => {
-    const sessionId = request.cookies.sessionId
+    const { sessionId } = SessionIdSchema.parse(request.cookies)
 
     if (!sessionId) {
       return reply.status(401).send({ error: 'Unauthorized' })
     }
 
-    const createdTransactionDataBody = z
-      .object({
-        amount: z.number(),
-        type: z.enum(['income', 'outcome']),
-        userId: z.string().uuid(),
-        userDestinationId: z.string().uuid(),
-      })
-      .refine((data) => data.userId !== data.userDestinationId)
-
     const { amount, type, userId, userDestinationId } =
-      createdTransactionDataBody.parse(request.body)
+      TransactionRequestSchema.parse(request.body)
 
     const transaction = await knex('transactions')
       .insert({
@@ -61,17 +56,13 @@ export async function transactionsRoutes(app: FastifyInstance) {
   })
 
   app.get('/transactions/:id', async (request, reply) => {
-    const getUserIdSchema = z.object({
-      id: z.string().uuid('Formato inválido do ID'),
-    })
-
-    const sessionId = request.cookies.sessionId
+    const { sessionId } = SessionIdSchema.parse(request.cookies)
 
     if (!sessionId) {
       return reply.status(401).send({ error: 'Unauthorized' })
     }
 
-    const { id } = getUserIdSchema.parse(request.params)
+    const { id } = UserIdSchema.parse(request.params)
 
     const transactions = await knex('transactions')
       .where({ user_id: id })
@@ -85,7 +76,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
       id: z.string().uuid('Formato inválido do ID'),
     })
 
-    const sessionId = request.cookies.sessionId
+    const { sessionId } = SessionIdSchema.parse(request.cookies)
 
     if (!sessionId) {
       return reply.status(401).send({ error: 'Unauthorized' })
