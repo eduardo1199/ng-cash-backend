@@ -2,15 +2,13 @@ import { FastifyInstance } from 'fastify'
 
 import crypto from 'node:crypto'
 
-import { z } from 'zod'
+import { CheckSessionId } from '../middlewares/check-session'
 
 import { knex } from '../database'
 import {
   UserIdSchema,
   UserRequestBodySchema,
 } from '../utils/user-routes-validation'
-
-import { SessionIdSchema } from '../utils/session-validation'
 
 export async function usersRoutes(app: FastifyInstance) {
   app.post('/users', async (request, reply) => {
@@ -70,30 +68,22 @@ export async function usersRoutes(app: FastifyInstance) {
     }
   })
 
-  app.delete('/users/:id', async (request, reply) => {
-    const { sessionId } = SessionIdSchema.parse(request.cookies)
+  app.delete(
+    '/users/:id',
+    { preHandler: [CheckSessionId] },
+    async (request, reply) => {
+      const { id } = UserIdSchema.parse(request.params)
 
-    const { id } = UserIdSchema.parse(request.params)
+      await knex('users').where({ id }).del()
 
-    if (!sessionId) {
-      return reply.status(401).send({ error: 'Unauthorized' })
-    }
+      return reply.status(200).send({ message: 'Deleted!' })
+    },
+  )
 
-    await knex('users').where({ id }).del()
-
-    return reply.status(200).send({ message: 'Deleted!' })
-  })
-
-  app.get('/users', async (request, reply) => {
-    const { sessionId } = SessionIdSchema.parse(request.cookies)
-
-    if (!sessionId) {
-      return reply.status(401).send({ error: 'Unauthorized' })
-    }
-
+  app.get('/users', { preHandler: [CheckSessionId] }, async (request) => {
     const userAuth = await knex('users')
       .select('id')
-      .where({ session_id: sessionId })
+      .where({ session_id: request.cookies.sessionId })
 
     const usersAll = await knex('users').select('*')
 
