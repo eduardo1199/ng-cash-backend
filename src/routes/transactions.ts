@@ -13,7 +13,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
     '/transactions',
     { preHandler: [CheckSessionId] },
     async (request, reply) => {
-      const { amount, type, userId, userDestinationId } =
+      const { amount, type, userId, userDestinationId, category, description } =
         TransactionRequestSchema.parse(request.body)
 
       const transaction = await knex('transactions')
@@ -22,6 +22,8 @@ export async function transactionsRoutes(app: FastifyInstance) {
           amount,
           type,
           user_id: userId,
+          category,
+          description,
         })
         .returning('id')
 
@@ -31,6 +33,8 @@ export async function transactionsRoutes(app: FastifyInstance) {
           amount,
           type: type === 'income' ? 'outcome' : 'income',
           user_id: userDestinationId,
+          category,
+          description,
         })
         .returning('id')
 

@@ -6,5 +6,7 @@ export const TransactionRequestSchema = z
     type: z.enum(['income', 'outcome']),
     userId: z.string().uuid(),
     userDestinationId: z.string().uuid(),
+    description: z.string(),
+    category: z.string(),
   })
   .refine((data) => data.userId !== data.userDestinationId)
