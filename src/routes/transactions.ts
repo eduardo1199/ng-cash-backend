@@ -4,13 +4,16 @@ import crypto from 'node:crypto'
 
 import { z } from 'zod'
 import { knex } from '../database'
-import { TransactionRequestSchema } from '../utils/transactions-routes-validation'
+import {
+  TransactionRequestSchema,
+  TransactionRequestSchemaId,
+} from '../utils/transactions-routes-validation'
 import { UserIdSchema } from '../utils/user-routes-validation'
 import { CheckSessionId } from '../middlewares/check-session'
 
 export async function transactionsRoutes(app: FastifyInstance) {
   app.post(
-    '/transactions',
+    '/transactions/transfer',
     { preHandler: [CheckSessionId] },
     async (request, reply) => {
       const { amount, type, userId, userDestinationId, category, description } =
@@ -31,7 +34,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
         .insert({
           id: crypto.randomUUID(),
           amount,
-          type: type === 'income' ? 'outcome' : 'income',
+          type: 'income',
           user_id: userDestinationId,
           category,
           description,
@@ -56,6 +59,28 @@ export async function transactionsRoutes(app: FastifyInstance) {
     },
   )
 
+  app.post(
+    '/transactions/deposit',
+    { preHandler: [CheckSessionId] },
+    async (request, reply) => {
+      const { amount, type, userId, category, description } =
+        TransactionRequestSchema.parse(request.body)
+
+      await knex('transactions')
+        .insert({
+          id: crypto.randomUUID(),
+          amount,
+          type,
+          user_id: userId,
+          category,
+          description,
+        })
+        .returning('id')
+
+      return reply.status(201).send()
+    },
+  )
+
   app.get(
     '/transactions/:id',
     { preHandler: [CheckSessionId] },
@@ -67,6 +92,51 @@ export async function transactionsRoutes(app: FastifyInstance) {
         .select('*')
 
       return { transactions }
+    },
+  )
+
+  app.get(
+    '/transactions/transfer/:id',
+    { preHandler: [CheckSessionId] },
+    async (request, reply) => {
+      const { id } = TransactionRequestSchemaId.parse(request.params)
+
+      const transactionTransfer = await knex('transactions_users') // buscar transferencia relacionado ao usuario de destino
+        .where({
+          transaction_id: id,
+        })
+        .first()
+
+      if (!transactionTransfer?.user_destiny_id) {
+        return reply.status(400).send({
+          message:
+            'Essa transferência foi realizar por você! Selecione outra transferência para buscar mais informações.',
+        })
+      }
+
+      const userOfTransfer = await knex('users') // buscar dados do usuario que recebeu a transferencia
+        .where({
+          id: transactionTransfer.user_destiny_id,
+        })
+        .first()
+
+      const transactionData = await knex('transactions') // buscar dados da transferencia selecionada
+        .where({
+          user_id: transactionTransfer.user_id,
+          id: transactionTransfer.transaction_id,
+        })
+        .first()
+
+      const transaction = {
+        amount: transactionData.amount,
+        createdAt: transactionData.created_at,
+        type: transactionData.type,
+        category: transactionData.category,
+        description: transactionData.description,
+        name: userOfTransfer.name,
+      }
+
+      return { transaction }
     },
   )
 
