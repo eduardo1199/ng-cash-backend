@@ -44,14 +44,11 @@ export async function usersRoutes(app: FastifyInstance) {
         created_at: new Date(),
         type: 'income',
         user_id: response[0].id,
+        category: 'Entrada inicial',
+        description: 'Primeiro depósito',
       })
 
-      return reply.status(201).send({
-        user: {
-          id: response[0].id,
-          name: response[0].name,
-        },
-      })
+      return reply.status(201).send({ id: response[0].id })
     } else {
       reply.cookie('sessionId', sessionId, {
         path: '/',
@@ -60,11 +57,12 @@ export async function usersRoutes(app: FastifyInstance) {
         maxAge: 1000 * 60 * 60 * 24 * 1, // 1 dias
       })
 
-      await knex('users')
+      const response = await knex('users')
         .where({ id: user.id })
         .update({ session_id: sessionId })
+        .returning('id')
 
-      return reply.status(200).send()
+      return reply.status(200).send({ id: response[0].id })
     }
   })
 
