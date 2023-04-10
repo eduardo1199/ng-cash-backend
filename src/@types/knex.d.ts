@@ -13,7 +13,9 @@ declare module 'knex/types/tables' {
     amount: number
     created_at: Date
     type: 'income' | 'outcome'
-    user_id: string
+    user_id: string | null
+    description: string | null
+    category: string | null
   }
 
   export interface Tables {
