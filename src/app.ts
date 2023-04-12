@@ -1,11 +1,13 @@
-import fastify from 'fastify'
-
+import fastify, { errorCodes } from 'fastify'
+import { z } from 'zod'
 import cookies from '@fastify/cookie'
 import cors from '@fastify/cors'
 
 import { usersRoutes } from './routes/users'
 import { transactionsRoutes } from './routes/transactions'
 import { env } from './env/validate'
+
+import { ErrorsHandler } from './middlewares/errors-handler'
 
 export const app = fastify({
   logger: true,
@@ -19,3 +21,5 @@ app.register(cors, {
   origin: env.CLIENT_URL,
   credentials: true,
 })
+
+app.setErrorHandler(ErrorsHandler)

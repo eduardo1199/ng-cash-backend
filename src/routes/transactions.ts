@@ -110,7 +110,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
       if (!transactionTransfer?.user_destiny_id) {
         return reply.status(400).send({
           message:
-            'Essa transferência foi realizar por você! Selecione outra transferência para buscar mais informações.',
+            'Essa transferência foi um depósito realizado por você! selecione outra transferência.',
         })
       }
 
