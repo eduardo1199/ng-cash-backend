@@ -32,10 +32,15 @@ export class UserRepository {
     return hasUserByEmail
   }
 
-  async updateSessionUser(id: string) {
+  async updateSessionUser(email: string) {
     const session_id = crypto.randomUUID()
 
-    await knex('users').where({ id }).update({ session_id }).returning('id')
+    const response = await knex('users')
+      .where({ email })
+      .update({ session_id })
+      .returning('id')
+
+    const id: string = response[0].id
 
     return id
   }
