@@ -1,7 +1,9 @@
 import crypto from 'node:crypto'
 import { knex } from '../database'
 
-export class UserRepository {
+import { User, UserRepository } from './user-repository'
+
+export class PrismaUserRepository implements UserRepository {
   async insert(name: string, email: string) {
     const session_id = crypto.randomUUID()
 
@@ -19,7 +21,7 @@ export class UserRepository {
     return id
   }
 
-  async hasUserByEmail(email: string) {
+  async findByEmail(email: string) {
     const user = await knex('users')
       .select()
       .where({
@@ -58,7 +60,7 @@ export class UserRepository {
   }
 
   async getAllUsers() {
-    const usersAll = await knex('users').select('*')
+    const usersAll: User[] = await knex('users').select('*')
 
     return usersAll
   }

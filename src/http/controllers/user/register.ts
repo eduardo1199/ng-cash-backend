@@ -1,10 +1,12 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { UserRequestBodySchema } from '../../../utils/user-routes-validation'
-import { registerServiceUser } from '../../../services/register-user'
-import { hasUserServiceUser } from '../../../services/has-user'
-import { updateUserService } from '../../../services/update-user'
+
+import { RegisterUserCase } from '../../../use-cases/register-user'
+import { HasUserByEmailCase } from '../../../use-cases/has-user'
+import { UpdateUserCase } from '../../../use-cases/update-user'
 
 import crypto from 'node:crypto'
+import { PrismaUserRepository } from '../../../repositories/prisma-user-repository'
 
 export async function RegisterUser(
   request: FastifyRequest,
@@ -12,29 +14,38 @@ export async function RegisterUser(
 ) {
   const { name, email } = UserRequestBodySchema.parse(request.body)
 
-  const hasUser = await hasUserServiceUser({ email })
+  try {
+    const userRepository = new PrismaUserRepository()
+    const hasUserCase = new HasUserByEmailCase(userRepository)
+    const registerUserCase = new RegisterUserCase(userRepository)
+    const updateUserCase = new UpdateUserCase(userRepository)
 
-  const sessionId = crypto.randomUUID()
+    const hasUser = await hasUserCase.execute(email)
 
-  if (hasUser) {
-    const id = await registerServiceUser({ name, email })
+    const sessionId = crypto.randomUUID()
 
-    reply.cookie('sessionId', sessionId, {
-      path: '/',
-      maxAge: 1000 * 60 * 60 * 24 * 1, // 1 dia
-    })
+    if (hasUser) {
+      const id = await registerUserCase.execute({ name, email })
 
-    return reply.status(201).send({ id })
-  } else {
-    reply.cookie('sessionId', sessionId, {
-      path: '/',
-      secure: false,
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 1, // 1 dias
-    })
+      reply.cookie('sessionId', sessionId, {
+        path: '/',
+        maxAge: 1000 * 60 * 60 * 24 * 1, // 1 dia
+      })
 
-    const id = await updateUserService({ email })
+      return reply.status(201).send({ id })
+    } else {
+      reply.cookie('sessionId', sessionId, {
+        path: '/',
+        secure: false,
+        sameSite: 'lax',
+        maxAge: 1000 * 60 * 60 * 24 * 1, // 1 dias
+      })
 
-    return reply.status(200).send({ id })
+      const id = await updateUserCase.execute(email)
+
+      return reply.status(200).send({ id })
+    }
+  } catch (error) {
+    return reply.status(500).send({ message: error.message })
   }
 }
