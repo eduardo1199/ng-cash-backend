@@ -7,9 +7,6 @@ export async function up(knex: Knex): Promise<void> {
     table.uuid('user_id').unsigned()
     table.foreign('user_id').references('id').inTable('users')
 
-    table.uuid('user_destiny_id').unsigned()
-    table.foreign('user_id').references('id').inTable('users')
-
     table.uuid('transaction_id').unsigned()
     table.foreign('transaction_id').references('id').inTable('transactions')
   })
