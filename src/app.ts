@@ -18,8 +18,8 @@ app.register(transactionsRoutes)
 
 app.register(cookies)
 app.register(cors, {
-  origin: env.CLIENT_URL,
-  credentials: true,
+  origin: env.NODE_ENV === 'production' ? undefined : env.CLIENT_URL,
+  credentials: env.NODE_ENV === 'production' ? undefined : true,
 })
 
 app.setErrorHandler(ErrorsHandler)
